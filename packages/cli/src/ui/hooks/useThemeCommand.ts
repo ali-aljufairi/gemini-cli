@@ -6,7 +6,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { themeManager } from '../themes/theme-manager.js';
-import { LoadedSettings, SettingScope } from '../../config/settings.js'; // Import LoadedSettings, AppSettings, MergedSetting
+import { LoadedSettings, SettingScope } from '../../config/settings.js';
 import { type HistoryItem, MessageType } from '../types.js';
 import { CustomTheme } from '../themes/theme.js';
 import process from 'node:process';
@@ -17,7 +17,7 @@ interface UseThemeCommandReturn {
   handleThemeSelect: (
     themeName: string | undefined,
     scope: SettingScope,
-  ) => void; // Added scope
+  ) => void;
   handleThemeHighlight: (themeName: string | undefined) => void;
   handleCustomThemeSave: (customTheme: CustomTheme, scope: SettingScope) => void;
   handleCustomThemeDelete: (themeName: string, scope: SettingScope) => void;
@@ -99,7 +99,6 @@ export const useThemeCommand = (
 
   const handleThemeSelect = useCallback(
     (themeName: string | undefined, scope: SettingScope) => {
-      // Added scope parameter
       try {
         loadedSettings.setValue(scope, 'theme', themeName); // Update the merged settings
         applyTheme(loadedSettings.merged.theme); // Apply the current theme

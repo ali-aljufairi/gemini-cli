@@ -91,6 +91,7 @@ import { createPolicyUpdater } from './config/policy.js';
 import { requestConsentNonInteractive } from './config/extensions/consent.js';
 import { ScrollProvider } from './ui/contexts/ScrollProvider.js';
 import { isAlternateBufferEnabled } from './ui/hooks/useAlternateBuffer.js';
+import { TerminalInfoProvider } from 'ink-picture';
 
 import { profiler } from './ui/components/DebugProfiler.js';
 
@@ -208,33 +209,37 @@ export async function startInteractiveUI(
   const AppWrapper = () => {
     useKittyKeyboardProtocol();
     return (
-      <SettingsContext.Provider value={settings}>
-        <KeypressProvider
-          config={config}
-          debugKeystrokeLogging={settings.merged.general?.debugKeystrokeLogging}
-        >
-          <MouseProvider
-            mouseEventsEnabled={mouseEventsEnabled}
+      <TerminalInfoProvider>
+        <SettingsContext.Provider value={settings}>
+          <KeypressProvider
+            config={config}
             debugKeystrokeLogging={
               settings.merged.general?.debugKeystrokeLogging
             }
           >
-            <ScrollProvider>
-              <SessionStatsProvider>
-                <VimModeProvider settings={settings}>
-                  <AppContainer
-                    config={config}
-                    startupWarnings={startupWarnings}
-                    version={version}
-                    resumedSessionData={resumedSessionData}
-                    initializationResult={initializationResult}
-                  />
-                </VimModeProvider>
-              </SessionStatsProvider>
-            </ScrollProvider>
-          </MouseProvider>
-        </KeypressProvider>
-      </SettingsContext.Provider>
+            <MouseProvider
+              mouseEventsEnabled={mouseEventsEnabled}
+              debugKeystrokeLogging={
+                settings.merged.general?.debugKeystrokeLogging
+              }
+            >
+              <ScrollProvider>
+                <SessionStatsProvider>
+                  <VimModeProvider settings={settings}>
+                    <AppContainer
+                      config={config}
+                      startupWarnings={startupWarnings}
+                      version={version}
+                      resumedSessionData={resumedSessionData}
+                      initializationResult={initializationResult}
+                    />
+                  </VimModeProvider>
+                </SessionStatsProvider>
+              </ScrollProvider>
+            </MouseProvider>
+          </KeypressProvider>
+        </SettingsContext.Provider>
+      </TerminalInfoProvider>
     );
   };
 

@@ -10,6 +10,8 @@ import type {
   ToolInvocation,
   ToolMcpConfirmationDetails,
   ToolResult,
+  ToolResultDisplay,
+  ImageResult,
 } from './tools.js';
 import {
   BaseDeclarativeTool,
@@ -374,13 +376,14 @@ function transformMcpContentToParts(sdkResponse: Part[]): Part[] {
 
 /**
  * Processes the raw response from the MCP tool to generate a clean,
- * human-readable string for display in the CLI. It summarizes non-text
- * content and presents text directly.
+ * human-readable representation for display in the CLI.
  *
  * @param rawResponse The raw Part[] array from the GenAI SDK.
- * @returns A formatted string representing the tool's output.
+ * @returns A ToolResultDisplay: either a formatted string or ImageResult.
  */
-function getStringifiedResultForDisplay(rawResponse: Part[]): string {
+function getStringifiedResultForDisplay(
+  rawResponse: Part[],
+): ToolResultDisplay {
   const mcpContent = rawResponse?.[0]?.functionResponse?.response?.[
     'content'
   ] as McpContentBlock[];
@@ -389,6 +392,26 @@ function getStringifiedResultForDisplay(rawResponse: Part[]): string {
     return '```json\n' + JSON.stringify(rawResponse, null, 2) + '\n```';
   }
 
+  const imageBlocks = mcpContent.filter(
+    (block): block is McpMediaBlock =>
+      block.type === 'image' && 'data' in block && 'mimeType' in block,
+  );
+
+  if (imageBlocks.length > 0) {
+    const textParts = mcpContent
+      .filter((block): block is McpTextBlock => block.type === 'text')
+      .map((block) => block.text);
+
+    const imageResult: ImageResult = {
+      images: imageBlocks.map((block) => ({
+        data: block.data,
+        mimeType: block.mimeType,
+        alt: textParts.length > 0 ? textParts.join('\n') : undefined,
+      })),
+    };
+
+    return imageResult;
+  }
   const displayParts = mcpContent.map((block: McpContentBlock): string => {
     switch (block.type) {
       case 'text':

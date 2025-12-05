@@ -455,9 +455,15 @@ describe('DiscoveredMCPTool', () => {
         },
         { text: 'Second part.' },
       ]);
-      expect(toolResult.returnDisplay).toBe(
-        'First part.\n[Image: image/jpeg]\nSecond part.',
-      );
+      expect(toolResult.returnDisplay).toEqual({
+        images: [
+          {
+            data: 'BASE64_IMAGE_DATA',
+            mimeType: 'image/jpeg',
+            alt: 'First part.\nSecond part.',
+          },
+        ],
+      });
     });
 
     it('should ignore unknown content block types', async () => {
@@ -528,9 +534,15 @@ describe('DiscoveredMCPTool', () => {
           },
         },
       ]);
-      expect(toolResult.returnDisplay).toBe(
-        'Here is a resource.\n[Link to My Resource: file:///path/to/resource]\nEmbedded text content.\n[Image: image/jpeg]',
-      );
+      expect(toolResult.returnDisplay).toEqual({
+        images: [
+          {
+            data: 'BASE64_IMAGE_DATA',
+            mimeType: 'image/jpeg',
+            alt: 'Here is a resource.',
+          },
+        ],
+      });
     });
 
     describe('AbortSignal support', () => {

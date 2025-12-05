@@ -7,6 +7,7 @@
 import React from 'react';
 import { Box, Text } from 'ink';
 import { DiffRenderer } from './DiffRenderer.js';
+import { ImageDisplay, isImageResult } from './ImageDisplay.js';
 import { MarkdownDisplay } from '../../utils/MarkdownDisplay.js';
 import { AnsiOutputText } from '../AnsiOutput.js';
 import { MaxSizedBox } from '../shared/MaxSizedBox.js';
@@ -114,6 +115,12 @@ export const ToolResultDisplay: React.FC<ToolResultDisplayProps> = ({
           'todos' in truncatedResultDisplay ? (
           // display nothing, as the TodoTray will handle rendering todos
           <></>
+        ) : isImageResult(truncatedResultDisplay) ? (
+          <ImageDisplay
+            imageResult={truncatedResultDisplay}
+            maxWidth={Math.min(childWidth, 60)}
+            maxHeight={availableHeight ? Math.min(availableHeight, 30) : 30}
+          />
         ) : (
           <AnsiOutputText
             data={truncatedResultDisplay as AnsiOutput}

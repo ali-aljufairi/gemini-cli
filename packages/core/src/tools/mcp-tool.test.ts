@@ -431,7 +431,7 @@ describe('DiscoveredMCPTool', () => {
             { type: 'text', text: 'First part.' },
             {
               type: 'image',
-              data: 'BASE64_IMAGE_DATA',
+              filePath: '/tmp/generated-image.jpg',
               mimeType: 'image/jpeg',
             },
             { type: 'text', text: 'Second part.' },
@@ -448,9 +448,9 @@ describe('DiscoveredMCPTool', () => {
           text: `[Tool '${serverToolName}' provided the following image data with mime-type: image/jpeg]`,
         },
         {
-          inlineData: {
+          fileData: {
             mimeType: 'image/jpeg',
-            data: 'BASE64_IMAGE_DATA',
+            fileUri: 'file:///tmp/generated-image.jpg',
           },
         },
         { text: 'Second part.' },
@@ -458,7 +458,7 @@ describe('DiscoveredMCPTool', () => {
       expect(toolResult.returnDisplay).toEqual({
         images: [
           {
-            data: 'BASE64_IMAGE_DATA',
+            filePath: '/tmp/generated-image.jpg',
             mimeType: 'image/jpeg',
             alt: 'First part.\nSecond part.',
           },
@@ -508,7 +508,7 @@ describe('DiscoveredMCPTool', () => {
             },
             {
               type: 'image',
-              data: 'BASE64_IMAGE_DATA',
+              filePath: '/tmp/generated-image-2.jpg',
               mimeType: 'image/jpeg',
             },
           ],
@@ -528,16 +528,16 @@ describe('DiscoveredMCPTool', () => {
           text: `[Tool '${serverToolName}' provided the following image data with mime-type: image/jpeg]`,
         },
         {
-          inlineData: {
+          fileData: {
             mimeType: 'image/jpeg',
-            data: 'BASE64_IMAGE_DATA',
+            fileUri: 'file:///tmp/generated-image-2.jpg',
           },
         },
       ]);
       expect(toolResult.returnDisplay).toEqual({
         images: [
           {
-            data: 'BASE64_IMAGE_DATA',
+            filePath: '/tmp/generated-image-2.jpg',
             mimeType: 'image/jpeg',
             alt: 'Here is a resource.',
           },

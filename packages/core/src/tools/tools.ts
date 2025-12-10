@@ -601,7 +601,8 @@ export interface TodoList {
 }
 
 export interface ImageData {
-  data: string;
+  /** Absolute or file:// URI to the generated image. */
+  filePath: string;
   mimeType: string;
   alt?: string;
 }

@@ -20,6 +20,9 @@ import {
   ToolConfirmationOutcome,
 } from './tools.js';
 import type { CallableTool, FunctionCall, Part } from '@google/genai';
+import * as path from 'node:path';
+import * as os from 'node:os';
+import * as fs from 'node:fs';
 import { ToolErrorType } from './tool-error.js';
 import type { Config } from '../config/config.js';
 import type { MessageBus } from '../confirmation-bus/message-bus.js';
@@ -35,7 +38,10 @@ type McpTextBlock = {
 type McpMediaBlock = {
   type: 'image' | 'audio';
   mimeType: string;
-  data: string;
+  filePath?: string;
+  uri?: string;
+  // audio/image tools previously returned base64; no longer used for images.
+  data?: string;
 };
 
 type McpResourceBlock = {
@@ -292,18 +298,35 @@ function transformImageAudioBlock(
   block: McpMediaBlock,
   toolName: string,
 ): Part[] {
+  const fileUri =
+    block.filePath && block.filePath.startsWith('file://')
+      ? block.filePath
+      : block.filePath
+        ? `file://${block.filePath}`
+        : block.uri;
+  const hasInlineData = typeof block.data === 'string' && block.data.length > 0;
+
   return [
     {
       text: `[Tool '${toolName}' provided the following ${
         block.type
       } data with mime-type: ${block.mimeType}]`,
     },
-    {
-      inlineData: {
-        mimeType: block.mimeType,
-        data: block.data,
-      },
-    },
+    fileUri
+      ? {
+          fileData: {
+            fileUri,
+            mimeType: block.mimeType,
+          },
+        }
+      : hasInlineData
+        ? {
+            inlineData: {
+              mimeType: block.mimeType,
+              data: block.data!,
+            },
+          }
+        : { text: '[No image payload provided]' },
   ];
 }
 
@@ -394,7 +417,11 @@ function getStringifiedResultForDisplay(
 
   const imageBlocks = mcpContent.filter(
     (block): block is McpMediaBlock =>
-      block.type === 'image' && 'data' in block && 'mimeType' in block,
+      block.type === 'image' &&
+      'mimeType' in block &&
+      (('filePath' in block && typeof block.filePath === 'string') ||
+        ('uri' in block && typeof block.uri === 'string') ||
+        ('data' in block && typeof block.data === 'string')),
   );
 
   if (imageBlocks.length > 0) {
@@ -402,15 +429,74 @@ function getStringifiedResultForDisplay(
       .filter((block): block is McpTextBlock => block.type === 'text')
       .map((block) => block.text);
 
-    const imageResult: ImageResult = {
-      images: imageBlocks.map((block) => ({
-        data: block.data,
-        mimeType: block.mimeType,
-        alt: textParts.length > 0 ? textParts.join('\n') : undefined,
-      })),
-    };
+    const images: ImageResult['images'] = imageBlocks
+      .map((block, index) => {
+        // Prefer filePath, then uri (stripping file:// prefix), then fallback to base64 temp file
+        let filePath: string | undefined = undefined;
 
-    return imageResult;
+        if (block.filePath && typeof block.filePath === 'string') {
+          filePath = block.filePath;
+        } else if (block.uri && typeof block.uri === 'string') {
+          // Strip file:// prefix if present
+          filePath = block.uri.startsWith('file://')
+            ? block.uri.replace('file://', '')
+            : block.uri;
+        }
+
+        // If we have a file path, verify it exists and use it
+        if (filePath) {
+          try {
+            // Verify file exists
+            if (fs.existsSync(filePath)) {
+              return {
+                filePath,
+                mimeType: block.mimeType,
+                alt: textParts.length > 0 ? textParts.join('\n') : undefined,
+              };
+            } else {
+              console.error(
+                `Image file path does not exist: ${filePath}, falling back to base64`,
+              );
+            }
+          } catch (err) {
+            console.error(
+              `Error checking image file path ${filePath}:`,
+              err,
+              'falling back to base64',
+            );
+          }
+        }
+
+        // Fallback: if only base64 data is present, materialize to a temp file.
+        if (block.data && typeof block.data === 'string') {
+          try {
+            const extension = block.mimeType.split('/')[1] || 'png';
+            const filename = `gemini-cli-image-mcp-${Date.now()}-${index}.${extension}`;
+            const filepath = path.join(os.tmpdir(), filename);
+            const buffer = Buffer.from(block.data, 'base64');
+            fs.writeFileSync(filepath, buffer);
+            return {
+              filePath: filepath,
+              mimeType: block.mimeType,
+              alt: textParts.length > 0 ? textParts.join('\n') : undefined,
+            };
+          } catch (err) {
+            console.error('Failed to write image temp file from MCP data', err);
+            return null;
+          }
+        }
+
+        console.error(
+          `Image block ${index} has no valid filePath, uri, or data field`,
+        );
+        return null;
+      })
+      .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+
+    if (images.length > 0) {
+      const imageResult: ImageResult = { images };
+      return imageResult;
+    }
   }
   const displayParts = mcpContent.map((block: McpContentBlock): string => {
     switch (block.type) {
